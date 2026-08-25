@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     ];
 
     const completion = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-20b",
       messages: [
         { role: "system", content: "You are an AI dashboard assistant. When users ask for data, revenue, or sales, ALWAYS use the generate_sales_chart tool to visualize it. If the user does not provide specific numbers, generate realistic random sales data (e.g., between 1000 and 15000) for the requested time periods." },
         ...messages
