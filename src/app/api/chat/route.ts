@@ -32,7 +32,8 @@ export async function POST(req: NextRequest) {
                   }
                 }
               }
-            }
+            },
+            required: ["title", "data"] // FIX: Added required fields for strict schemas
           }
         }
       }
@@ -41,7 +42,6 @@ export async function POST(req: NextRequest) {
     const completion = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
       messages: [
-        // FIX: Updated System Prompt to generate random data if none is provided
         { role: "system", content: "You are an AI dashboard assistant. When users ask for data, revenue, or sales, ALWAYS use the generate_sales_chart tool to visualize it. If the user does not provide specific numbers, generate realistic random sales data (e.g., between 1000 and 15000) for the requested time periods." },
         ...messages
       ],
@@ -55,8 +55,13 @@ export async function POST(req: NextRequest) {
     if (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
       const toolCall: any = responseMessage.tool_calls[0];
       if (toolCall.function.name === 'generate_sales_chart') {
-        const args = JSON.parse(toolCall.function.arguments);
-        return NextResponse.json({ toolCall: { name: 'generate_sales_chart', args } });
+        try {
+          const args = JSON.parse(toolCall.function.arguments);
+          return NextResponse.json({ toolCall: { name: 'generate_sales_chart', args } });
+        } catch (parseError) {
+          console.error('[Chat] JSON Parse Error for Tool Args:', toolCall.function.arguments);
+          return NextResponse.json({ error: 'AI returned malformed chart data.' }, { status: 500 });
+        }
       }
     }
 
@@ -64,7 +69,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ text: responseMessage.content });
 
   } catch (error: any) {
-    console.error('Chat Error:', error);
+    console.error('[Chat] Catch Block Error:', error);
     return NextResponse.json({ error: 'Failed to generate response' }, { status: 500 });
   }
 }
